@@ -10,7 +10,7 @@ Parameters:
         ExistingACK:
           zh-cn: 已有容器集群
           en: New ACK
-        ExistingVPC:
+        NewACK:
           zh-cn: 新建容器集群
           en: Existing ACK
     Label:
