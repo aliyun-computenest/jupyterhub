@@ -461,7 +461,7 @@ Resources:
         Ref: OAuthApplication
   ComputenestHelmApplication:
     Type: MODULE::ACS::ComputeNest::FluxOciHelmDeploy
-    Version: v1
+    Version: default
     Properties:
       ClusterId:
         Fn::If:
@@ -470,7 +470,7 @@ Resources:
               - ManagedKubernetesCluster
               - ClusterId
           - Ref: ClusterId
-      HelmChartUrl: '{{ computenest::helmchart::argoworkflow }}'
+      HelmChartUrl: '{{ computenest::helmchart::jupyterhub }}'
       DockerConfigJson: '{{ computenest::helm::dockerconfigjson }}'
       ChartValues:
         ingress:
@@ -571,7 +571,7 @@ Outputs:
       en: Jupyterhub Endpoint
     Value:
       Fn::Sub:
-        - "访问网址 http://${DomainAddress}; 请配置 ${ServerAddress} ${DomainAddress}到域名解析，或hosts中"
+        - "http://${DomainAddress}\n 请配置 ${ServerAddress} ${DomainAddress}到域名解析，或hosts中"
         - ServerAddress:
             Fn::GetAtt:
               - ClusterApplicationResources

@@ -7,8 +7,8 @@ Service:
     SupplierDeployMetadata:
       HelmChartArtifactRelation:
         '{{ computenest::helmchart::jupyterhub }}':
-          ArtifactId: ${Artifact.Artifact_HelmChart_Volcano.ArtifactId}
-          ArtifactVersion: ${Artifact.Artifact_HelmChart_Volcano.ArtifactVersion}
+          ArtifactId: ${Artifact.Artifact_HelmChart_Jupyterhub.ArtifactId}
+          ArtifactVersion: ${Artifact.Artifact_HelmChart_Jupyterhub.ArtifactVersion}
     TemplateConfigs:
       - Name: 模版1
         Url: 'ros_templates/template.yaml'
@@ -22,15 +22,15 @@ Service:
   ShareType: Public
   ApprovalType: Manual
 Artifact:
-  Artifact_HelmChart_Volcano:
+  Artifact_HelmChart_Jupyterhub:
     ArtifactType: HelmChart
     ArtifactName: Chart_Jupyterhub
     Description: Jupyterhub HelmChart部署物
     ArtifactProperty:
-      RepoName: ${HelmChartBuilder.HelmChart_Volcano.RepoName}
-      Tag: ${HelmChartBuilder.HelmChart_Volcano.Tag}
+      RepoName: ${HelmChartBuilder.HelmChart_Jupyterhub.RepoName}
+      Tag: ${HelmChartBuilder.HelmChart_Jupyterhub.Tag}
 HelmChartBuilder:
   HelmChart_Jupyterhub:
-    HelmChartPath: 'targets/jupyterhub-4.0.0.tgz'
+    HelmChartPath: '../targets/jupyterhub-4.0.0.tgz'
     RepoName: jupyterhub
     Tag: 4.0.0
