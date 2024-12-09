@@ -35,8 +35,8 @@ Parameters:
       Visible:
         Condition:
           Fn::Equals:
-            - ${CreateAck}
-            - false
+            - ${AckOptions}
+            - ExistingACK
   PayType:
     Type: String
     Label:
@@ -52,8 +52,8 @@ Parameters:
       Visible:
         Condition:
           Fn::Equals:
-            - ${CreateAck}
-            - true
+            - ${AckOptions}
+            - NewACK
   PayPeriodUnit:
     Type: String
     Label:
@@ -69,8 +69,8 @@ Parameters:
         Condition:
           Fn::And:
             - Fn::Equals:
-                - ${CreateAck}
-                - true
+              - ${AckOptions}
+              - NewACK
             - Fn::Not:
                 Fn::Equals:
                   - ${PayType}
@@ -100,8 +100,8 @@ Parameters:
         Condition:
           Fn::And:
             - Fn::Equals:
-                - ${CreateAck}
-                - true
+              - ${AckOptions}
+              - NewACK
             - Fn::Not:
                 Fn::Equals:
                   - ${PayType}
