@@ -1,14 +1,23 @@
 ROSTemplateFormatVersion: '2015-09-01'
 Parameters:
-  CreateAck:
-    Type: Boolean
-    Description:
-      en: An existing ack cluster can be deployed by entering the cluster id. If there is no current cluster, create a new ack cluster before deploying
-      zh-cn: 已有ack集群输入集群id即可部署，当前无集群先新建ack集群再进行部署
+  AckOptions:
+    Type: String
+    AllowedValues:
+      - ExistingACK
+      - NewACK
+    AssociationPropertyMetadata:
+      ValueLabelMapping:
+        ExistingACK:
+          zh-cn: 已有容器集群
+          en: New ACK
+        ExistingVPC:
+          zh-cn: 新建容器集群
+          en: Existing ACK
     Label:
-      en: Wether create ack cluster
-      zh-cn: 是否新建ack集群
-    Default: true
+      en: Select Existing or New Kubernetes
+      zh-cn: 选择已有/新建的容器集群
+    Required: true
+    Default: ExistingACK
   ClusterId:
     Type: String
     Description:
@@ -108,8 +117,8 @@ Parameters:
       Visible:
         Condition:
           Fn::Equals:
-            - ${CreateAck}
-            - true
+            - ${AckOptions}
+            - NewACK
   VpcId:
     Type: String
     Label:
@@ -127,8 +136,8 @@ Parameters:
       Visible:
         Condition:
           Fn::Equals:
-            - ${CreateAck}
-            - true
+            - ${AckOptions}
+            - NewACK
   VSwitchId:
     Type: String
     Label:
@@ -147,8 +156,8 @@ Parameters:
       Visible:
         Condition:
           Fn::Equals:
-            - ${CreateAck}
-            - true
+            - ${AckOptions}
+            - NewACK
   LoginPassword:
     NoEcho: true
     Type: String
@@ -166,8 +175,8 @@ Parameters:
       Visible:
         Condition:
           Fn::Equals:
-            - ${CreateAck}
-            - true
+            - ${AckOptions}
+            - NewACK
     AllowedPattern: ^[a-zA-Z0-9-\(\)\`\~\!\@\#\$\%\^\&\*\_\-\+\=\|\{\}\[\]\:\;\<\>\,\.\?\/]*$
     MinLength: 8
     MaxLength: 30
@@ -182,8 +191,8 @@ Parameters:
       Visible:
         Condition:
           Fn::Equals:
-            - ${CreateAck}
-            - true
+            - ${AckOptions}
+            - NewACK
     Default: ecs.g6.large
   WorkerSystemDiskCategory:
     Type: String
@@ -198,8 +207,8 @@ Parameters:
       Visible:
         Condition:
           Fn::Equals:
-            - ${CreateAck}
-            - true
+            - ${AckOptions}
+            - NewACK
     Label:
       en: Worker System Disk Category
       zh-cn: Worker 系统盘磁盘类型
@@ -215,8 +224,8 @@ Parameters:
       Visible:
         Condition:
           Fn::Equals:
-            - ${CreateAck}
-            - true
+            - ${AckOptions}
+            - NewACK
   AckNetworkPlugin:
     Type: String
     Label:
@@ -229,8 +238,8 @@ Parameters:
       Visible:
         Condition:
           Fn::Equals:
-            - ${CreateAck}
-            - true
+            - ${AckOptions}
+            - NewACK
     Default: Flannel
   PodCidr:
     Type: String
@@ -246,8 +255,8 @@ Parameters:
         Condition:
           Fn::And:
             - Fn::Equals:
-                - ${CreateAck}
-                - true
+              - ${AckOptions}
+              - NewACK
             - Fn::Equals:
                 - ${AckNetworkPlugin}
                 - Flannel
@@ -271,8 +280,8 @@ Parameters:
         Condition:
           Fn::And:
             - Fn::Equals:
-                - ${CreateAck}
-                - true
+              - ${AckOptions}
+              - NewACK
             - Fn::Equals:
                 - ${AckNetworkPlugin}
                 - Terway
@@ -289,8 +298,8 @@ Parameters:
       Visible:
         Condition:
           Fn::Equals:
-            - ${CreateAck}
-            - true
+            - ${AckOptions}
+            - NewACK
     Default: 172.16.0.0/16
   DomainAddress:
     Type: String
@@ -305,8 +314,8 @@ Parameters:
 Conditions:
   CreateAck:
     Fn::Equals:
-      - true
-      - Ref: CreateAck
+      - ${AckOptions}
+      - NewACK
   FlannelPluginCondition:
     Fn::Equals:
       - Ref: AckNetworkPlugin
@@ -482,7 +491,7 @@ Resources:
         hub:
           db:
             pvc:
-              storage: 40Gi
+              storage: 20Gi
               storageClassName: alicloud-disk-essd
           extraEnv:
             OAUTH2_AUTHORIZE_URL: https://signin.aliyun.com/oauth2/v1/auth
@@ -523,7 +532,7 @@ Resources:
             blockWithIptables: false
           storage:
             type: dynamic
-            capacity: 40Gi
+            capacity: 20Gi
             dynamic:
               storageClass: alicloud-disk-essd
         cull:
