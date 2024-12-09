@@ -1,0 +1,36 @@
+Service:
+  RegionId: cn-hangzhou
+  DeployType: ros
+  DeployMetadata:
+    ServiceInstanceNameRule:
+      Prefix: jupyterhub-
+    SupplierDeployMetadata:
+      HelmChartArtifactRelation:
+        '{{ computenest::helmchart::jupyterhub }}':
+          ArtifactId: ${Artifact.Artifact_HelmChart_Volcano.ArtifactId}
+          ArtifactVersion: ${Artifact.Artifact_HelmChart_Volcano.ArtifactVersion}
+    TemplateConfigs:
+      - Name: 模版1
+        Url: 'ros_templates/template.yaml'
+        AllowedRegions: []
+  ServiceType: private
+  ServiceInfo:
+    Locale: zh-CN
+    ShortDescription: 支持多用户的 Jupyter Notebook 服务器，用于创建、管理、代理多个 Jupyter Notebook 实例。具有扩展性和可定制性
+    Image: 'resources/icons/service_logo.png'
+    Name: Jupyterhub社区版
+  ShareType: Public
+  ApprovalType: Manual
+Artifact:
+  Artifact_HelmChart_Volcano:
+    ArtifactType: HelmChart
+    ArtifactName: Chart_Jupyterhub
+    Description: Jupyterhub HelmChart部署物
+    ArtifactProperty:
+      RepoName: ${HelmChartBuilder.HelmChart_Volcano.RepoName}
+      Tag: ${HelmChartBuilder.HelmChart_Volcano.Tag}
+HelmChartBuilder:
+  HelmChart_Jupyterhub:
+    HelmChartPath: 'targets/jupyterhub-4.0.0.tgz'
+    RepoName: jupyterhub
+    Tag: 4.0.0
