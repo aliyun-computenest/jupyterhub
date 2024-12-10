@@ -580,7 +580,14 @@ Outputs:
       en: Jupyterhub Endpoint
     Value:
       Fn::Sub:
-        - "http://${DomainAddress}\n 请配置 ${ServerAddress} ${DomainAddress}到域名解析，或hosts中"
+        - "http://${DomainAddress}"
+        - DomainAddress:
+            Ref: DomainAddress
+  Description:
+    Label: 请配置到域名解析或hosts中
+    Value:
+      Fn::Sub:
+        - ${ServerAddress} ${DomainAddress}
         - ServerAddress:
             Fn::GetAtt:
               - ClusterApplicationResources
