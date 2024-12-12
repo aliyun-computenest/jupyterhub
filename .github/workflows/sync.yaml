@@ -1,0 +1,56 @@
+name: ComputeNest Production Deployment
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  Deploy-Production:
+    runs-on: ubuntu-latest
+    environment: default  # 使用环境 default
+    env:
+      AK_ID: ${{ secrets.AK_ID }}
+      AK_SECRET: ${{ secrets.AK_SECRET }}
+      SERVICE_ID: ${{ secrets.SERVICE_ID }}
+      SERVICE_NAME: ${{ secrets.SERVICE_NAME }}
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Check .computenest Directory
+        run: |
+          if [ ! -d ".computenest" ]; then
+            echo "Error: .computenest directory not found. Please import your service from the ComputeNest console."
+            echo "Guide here: https://computenest.console.aliyun.com/service/create/cn-hangzhou"
+            exit 1
+          fi
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.10'
+
+      - name: Install ComputeNest CLI
+        run: pip install computenest-cli
+
+      - name: Login to ComputeNest CLI
+        run: |
+          computenest-cli login --access_key_id "$AK_ID" --access_key_secret "$AK_SECRET"
+
+      - name: Import Service using ComputeNest CLI
+        run: |
+          params=()
+          if [[ ! -z "$SERVICE_ID" ]]; then
+            params+=(--service_id "$SERVICE_ID")
+          elif [[ ! -z "$SERVICE_NAME" ]]; then
+            params+=(--service_name "$SERVICE_NAME")
+          else
+            echo "Error: Neither SERVICE_ID nor SERVICE_NAME is set."
+            exit 1
+          fi
+
+          computenest-cli import "${params[@]}" || { echo 'Import failed'; exit 1; }
+
+      - name: Output Result
+        run: echo "Deployment completed."
