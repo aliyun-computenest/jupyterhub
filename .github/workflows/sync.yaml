@@ -51,6 +51,5 @@ jobs:
           fi
 
           computenest-cli import "${params[@]}" || { echo 'Import failed'; exit 1; }
-
       - name: Output Result
         run: echo "Deployment completed."
