@@ -311,6 +311,27 @@ Parameters:
       en:  Please enter a valid domain name
       zh-cn: 请输入有效的域名
     AllowedPattern: '^(?!-)[A-Za-z0-9-]{1,63}(?<!-)(\.[A-Za-z]{2,})+$'
+  HelmValues:
+    Type: Json
+    Label:
+      en: helm values
+      zh-cn: helm配置
+    Default:
+      hub:
+        db:
+          pvc:
+            storage: 20Gi
+            storageClassName: alicloud-disk-essd
+      singleuser:
+        extraLabels:
+          hub.jupyter.org/network-access-hub: "true"
+        cloudMetadata:
+          blockWithIptables: false
+        storage:
+          type: dynamic
+          capacity: 20Gi
+          dynamic:
+            storageClass: alicloud-disk-essd
 Conditions:
   CreateAck:
     Fn::Equals:
@@ -482,65 +503,40 @@ Resources:
       HelmChartUrl: '{{ computenest::helmchart::jupyterhub }}'
       DockerConfigJson: '{{ computenest::helm::dockerconfigjson }}'
       ChartValues:
-        ingress:
-          enabled: true
-          ingressClassName: nginx
-          hosts:
-            - Ref: DomainAddress
-          pathType: Prefix
-        hub:
-          db:
-            pvc:
-              storage: 20Gi
-              storageClassName: alicloud-disk-essd
-          extraEnv:
-            OAUTH2_AUTHORIZE_URL: https://signin.aliyun.com/oauth2/v1/auth
-            OAUTH2_TOKEN_URL: https://oauth.aliyun.com/v1/token
-            OAUTH_CALLBACK_URL:
-              Fn::Sub:
-                - http://${DomainAddress}/hub/oauth_callback
-                - DomainAddress:
-                    Ref: DomainAddress
-          config:
-            JupyterHub:
-              authenticator_class: oauthenticator.generic.GenericOAuthenticator
-              GenericOAuthenticator:
-                allow_all: True
-                admin_users:
-                  - Ref: ALIYUN::TenantId
-                  - Ref: ALIYUN::AccountId
-                login_service: "Alibaba Cloud"
-                client_id:
-                  Fn::GetAtt:
-                    - OAuthApplication
-                    - AppId
-                client_secret:
-                  Fn::GetAtt:
-                    - OAuthSecret
-                    - AppSecretValue
-                token_url: https://oauth.aliyun.com/v1/token
-                userdata_url: https://oauth.aliyun.com/v1/userinfo
-                userdata_method: GET
-                username_key: uid
-                userdata_params: { "state": "state" }
-                scope: [ "openid", "profile", "aliuid" ]
-        singleuser:
-          extraLabels:
-            alibabacloud.com/eci: "true"
-            hub.jupyter.org/network-access-hub: "true"
-          cloudMetadata:
-            blockWithIptables: false
-          storage:
-            type: dynamic
-            capacity: 20Gi
-            dynamic:
-              storageClass: alicloud-disk-essd
-        cull:
-          enabled: true
-          users: false
-          adminUsers: true
-          timeout: 3600
-          every: 600
+        Fn::MergeMap:
+          - Ref: HelmValues
+          - hub:
+              extraEnv:
+                OAUTH2_AUTHORIZE_URL: https://signin.aliyun.com/oauth2/v1/auth
+                OAUTH2_TOKEN_URL: https://oauth.aliyun.com/v1/token
+                OAUTH_CALLBACK_URL:
+                  Fn::Sub:
+                    - http://${DomainAddress}/hub/oauth_callback
+                    - DomainAddress:
+                        Ref: DomainAddress
+              config:
+                JupyterHub:
+                  authenticator_class: oauthenticator.generic.GenericOAuthenticator
+                  GenericOAuthenticator:
+                    allow_all: True
+                    admin_users:
+                      - Ref: ALIYUN::TenantId
+                      - Ref: ALIYUN::AccountId
+                    login_service: "Alibaba Cloud"
+                    client_id:
+                      Fn::GetAtt:
+                        - OAuthApplication
+                        - AppId
+                    client_secret:
+                      Fn::GetAtt:
+                        - OAuthSecret
+                        - AppSecretValue
+                    token_url: https://oauth.aliyun.com/v1/token
+                    userdata_url: https://oauth.aliyun.com/v1/userinfo
+                    userdata_method: GET
+                    username_key: uid
+                    userdata_params: { "state": "state" }
+                    scope: [ "openid", "profile", "aliuid" ]
       Namespace:
         Ref: ALIYUN::StackName
       ReleaseName: jupyterhub
@@ -631,6 +627,7 @@ Metadata:
           zh-cn: 基础配置
       - Parameters:
           - DomainAddress
+          - HelmValues
         Label:
           en: Application Configuration
           zh-cn: 应用配置

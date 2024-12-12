@@ -10,9 +10,20 @@ Service:
           ArtifactId: ${Artifact.Artifact_HelmChart_Jupyterhub.ArtifactId}
           ArtifactVersion: ${Artifact.Artifact_HelmChart_Jupyterhub.ArtifactVersion}
     TemplateConfigs:
-      - Name: 模版1
+      - Name: K8s集群版
         Url: 'ros_templates/template.yaml'
         AllowedRegions: []
+  OperationMetadata:
+    ModifyParametersConfig:
+      - TemplateName: K8s集群版
+        Operation:
+          - Name: 修改Helm参数
+            Description: 修改Helm参数
+            Type: Custom
+            SupportPredefinedParameters: false
+            EnableLogging: false
+            Parameters:
+              - HelmValues
   ServiceType: private
   ServiceInfo:
     Locale: zh-CN
