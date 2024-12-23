@@ -577,7 +577,9 @@ Outputs:
         - DomainAddress:
             Ref: DomainAddress
   Description:
-    Label: 请配置到域名解析或hosts中
+    Description:
+      zh-cn: 请配置到域名解析或hosts中
+      en: please add in domains or hosts
     Value:
       Fn::Sub:
         - ${ServerAddress} ${DomainAddress}
