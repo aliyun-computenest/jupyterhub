@@ -1,0 +1,30 @@
+ChartValues:
+  hub:
+    db:
+      pvc:
+        storageClassName: alicloud-disk-essd
+        storage: 20Gi
+  singleuser:
+    storage:
+      dynamic:
+        storageClass: alicloud-disk-essd
+      type: dynamic
+      capacity: 20Gi
+    extraLabels:
+      hub.jupyter.org/network-access-hub: 'true'
+    cloudMetadata:
+      blockWithIptables: false
+HelmChartPath: helm
+RuntimeType: Kubernetes
+OutputCmd: |-
+  export SERVICE_IP=$(kubectl get svc --namespace ${Namespace} proxy-public -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+  echo "Visit URL: http://$SERVICE_IP/"
+ServiceType: private
+ArtifactSourceType: HelmChart
+ServiceBuildRegion: ap-southeast-1
+RepoName: aliyun-computenest/jupyterhub
+RegionId: cn-hangzhou
+OutputType: OutputCommand
+Owner: hanans426
+Branch: main
+Platform: github
