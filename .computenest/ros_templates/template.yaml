@@ -8,7 +8,6 @@ Parameters:
     AllowedValues:
       - ExistCs
       - NewAck
-      - NewAcs
     AssociationPropertyMetadata:
       ValueLabelMapping:
         ExistCs:
@@ -17,9 +16,6 @@ Parameters:
         NewAck:
           zh-cn: 新建ACK集群
           en: New ACK
-        NewAcs:
-          zh-cn: 新建ACS集群
-          en: New ACS
     Label:
       en: Cluster Option
       zh-cn: 集群选项
@@ -175,8 +171,8 @@ Parameters:
                   - ${CsOptions}
                   - ExistCs
             - Fn::Equals:
-                  - ExistingVPC
-                  - ${VpcOption}
+                - ExistingVPC
+                - ${VpcOption}
   VSwitchId:
     Type: String
     Label:
@@ -201,8 +197,8 @@ Parameters:
                   - ${CsOptions}
                   - ExistCs
             - Fn::Equals:
-                  - ExistingVPC
-                  - ${VpcOption}
+                - ExistingVPC
+                - ${VpcOption}
   VpcCidrBlock:
     Type: String
     Label:
@@ -395,6 +391,16 @@ Parameters:
               - ${CsOptions}
               - ExistCs
     Default: 172.16.0.0/16
+  DomainAddress:
+    Type: String
+    Label:
+      en: Domain
+      zh-cn: 域名
+    Default: 'jupyter.mycompany.local'
+    Description:
+      en:  Please enter a valid domain name
+      zh-cn: 请输入有效的域名
+    AllowedPattern: '^(?!-)[A-Za-z0-9-]{1,63}(?<!-)(\.[A-Za-z]{2,})+$'
   ChartValues:
     Type: Json
     Label:
@@ -482,6 +488,34 @@ Resources:
         Ref: WorkerSystemDiskSize
       LoginPassword:
         Ref: LoginPassword
+  OAuthApplication:
+    Type: ALIYUN::RAM::Application
+    Properties:
+      PredefinedScopes:
+        - aliuid
+        - profile
+        - openid
+      RequiredScopes:
+        - aliuid
+        - profile
+        - openid
+      SecretRequired: true
+      DisplayName:
+        Ref: ALIYUN::StackName
+      AppName:
+        Ref: ALIYUN::StackName
+      IsMultiTenant: false
+      AppType: WebApp
+      RedirectUris:
+        - Fn::Sub:
+            - http://${DomainAddress}/hub/oauth_callback
+            - DomainAddress:
+                Ref: DomainAddress
+  OAuthSecret:
+    Type: ALIYUN::RAM::AppSecret
+    Properties:
+      AppId:
+        Ref: OAuthApplication
   FluxHelmApplicationModule:
     DependsOn:
       - AckOrAcsClusterModule
@@ -494,52 +528,90 @@ Resources:
           - ClusterId
       HelmChartUrl: '{{ computenest::helmchart::jupyterhub }}'
       ChartValues:
-        Ref: ChartValues
+        Fn::MergeMap:
+          - Ref: ChartValues
+          - hub:
+              extraEnv:
+                OAUTH2_AUTHORIZE_URL: https://signin.aliyun.com/oauth2/v1/auth
+                OAUTH2_TOKEN_URL: https://oauth.aliyun.com/v1/token
+                OAUTH_CALLBACK_URL:
+                  Fn::Sub:
+                    - http://${DomainAddress}/hub/oauth_callback
+                    - DomainAddress:
+                        Ref: DomainAddress
+              config:
+                JupyterHub:
+                  authenticator_class: oauthenticator.generic.GenericOAuthenticator
+                  GenericOAuthenticator:
+                    allow_all: True
+                    admin_users:
+                      - Ref: ALIYUN::TenantId
+                      - Ref: ALIYUN::AccountId
+                    login_service: "Alibaba Cloud"
+                    client_id:
+                      Fn::GetAtt:
+                        - OAuthApplication
+                        - AppId
+                    client_secret:
+                      Fn::GetAtt:
+                        - OAuthSecret
+                        - AppSecretValue
+                    token_url: https://oauth.aliyun.com/v1/token
+                    userdata_url: https://oauth.aliyun.com/v1/userinfo
+                    userdata_method: GET
+                    username_key: uid
+                    userdata_params: { "state": "state" }
+                    scope: [ "openid", "profile", "aliuid" ]
       Namespace:
-        Ref: 'ALIYUN::StackName'
+        Ref: ALIYUN::StackName
       ReleaseName: jupyterhub
-      OutputCmd: |
-        export SERVICE_IP=$(kubectl get svc --namespace ${Namespace} proxy-public -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
-        echo "Visit URL: http://$SERVICE_IP/"
-Outputs:
-  Instruction:
-    Description:
-      zh-cn: 使用说明
-      en: Instruction
-    Value:
-      Fn::Sub:
-        - |
-          ${OutputData}
-        - OutputData:
-            Fn::GetAtt:
-              - FluxHelmApplicationModule
-              - HelmOutput
-  UpdateDesc:
-    Description:
-      zh-cn: 更新说明
-      en: UpdateDesc
-    Value:
-      Fn::Sub:
-        - |
-          You can update the deployed Helm Release locally using the following command:
-          helm upgrade ${ReleaseName} ${HelmRepo} --version ${HelmTag} -f values.yaml -n ${Namespace}
-        - ReleaseName: jupyterhub
+      WaitUntil:
+        - Kind: Service
+          Name: proxy-public
           Namespace:
-            Ref: 'ALIYUN::StackName'
-          HelmRepo:
-            Fn::Join:
-              - ':'
-              - Fn::Select:
-                  - 0:-1
-                  - Fn::Split:
-                      - ':'
-                      - '{{ computenest::helmchart::jupyterhub }}'
-          HelmTag:
-            Fn::Select:
-              - -1
-              - Fn::Split:
-                  - ':'
-                  - '{{ computenest::helmchart::jupyterhub }}'
+            Ref: ALIYUN::StackName
+          JsonPath: $.status.loadBalancer.ingress[0].ip
+          Operator: NotEmpty
+          FirstMatch: true
+          Timeout: 300
+  ClusterApplicationResources:
+    Type: DATASOURCE::CS::ClusterApplicationResources
+    DependsOn:
+      - FluxHelmApplicationModule
+    Properties:
+      ClusterId:
+        Fn::GetAtt:
+          - AckOrAcsClusterModule
+          - ClusterId
+      Kind: Service
+      Name: proxy-public
+      Namespace:
+        Ref: ALIYUN::StackName
+      JsonPath: $.status.loadBalancer.ingress[0].ip
+      FirstMatch: true
+Outputs:
+  # 将公网ip做为http返回的地址显示在控制台
+  Endpoint:
+    Description:
+      zh-cn: Jupyterhub地址
+      en: Jupyterhub Endpoint
+    Value:
+      Fn::Sub:
+        - "http://${DomainAddress}"
+        - DomainAddress:
+            Ref: DomainAddress
+  Description:
+    Description:
+      zh-cn: 请配置到域名解析或hosts中
+    Value:
+      Fn::Sub:
+        - ${ServerAddress} ${DomainAddress}
+        - ServerAddress:
+            Fn::GetAtt:
+              - ClusterApplicationResources
+              - Response
+          DomainAddress:
+            Ref: DomainAddress
 Metadata:
   ALIYUN::ROS::Interface:
     ParameterGroups:
@@ -583,3 +655,8 @@ Metadata:
         Label:
           en: Basic Configuration
           zh-cn: 基础配置
+      - Parameters:
+          - DomainAddress
+        Label:
+          en: Application Configuration
+          zh-cn: 应用配置
