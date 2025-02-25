@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="description" content="计算巢是阿里云开放给企业应用服务商的服务管理平台。服务商能够在计算巢上发布私有化部署服务，为其客户提供云上软件一键部署的能力；同时也支持全托管模式的服务，赋能服务商托管其客户资源。">
+  <title>Jupyterhub服务实例部署文档 - Aliyun 计算巢 x valcano</title>
+
+  <link rel="shortcut icon" href="img/favicon.ico">
+
+  <link rel="stylesheet" href="https://unpkg.com/purecss@1.0.0/build/pure-min.css">
+  <link rel="stylesheet" href="css/theme.css">
+  
+
+  
+
+  
+  
+
+  
+    <script src="search/main.js"></script>
+  
+
+  
+
+  <script src="js/highlight.min.js"></script>
+  <script>hljs.highlightAll();</script>
+</head>
+
+<body>
+  <div class="container">
+    <div class="nav">
+      <div class="nav-inner">
+        <div class="logo">
+          <img src="./img/logo-2x.png">
+        </div>
+        <div class="nav-list">
+          <ul>
+          
+              <li><a href="#jupyterhub">Jupyterhub服务实例部署文档</a></li>
+              
+                  <li><a href="#_1">概述</a></li>
+                  
+              
+                  <li><a href="#_2">计费说明</a></li>
+                  
+              
+                  <li><a href="#_3">部署架构</a></li>
+                  
+              
+                  <li><a href="#ram">RAM账号所需权限</a></li>
+                  
+              
+                  <li><a href="#_4">部署流程</a></li>
+                  
+                      <li class="li-h3"><a href="#_5">部署步骤</a></li>
+                  
+                      <li class="li-h3"><a href="#_6">部署参数说明</a></li>
+                  
+                      <li class="li-h3"><a href="#_7">验证结果</a></li>
+                  
+              
+                  <li><a href="#_8">高级选项</a></li>
+                  
+                      <li class="li-h3"><a href="#ackecispotworker">ACK场景下使用ECI+Spot弹性运行Worker节省成本</a></li>
+                  
+                      <li class="li-h3"><a href="#helm">helm包路径</a></li>
+                  
+                      <li class="li-h3"><a href="#_9">更多配置</a></li>
+                  
+              
+          
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="content theme-github">
+      
+      <div class="content-inner">        
+        
+        <h1 id="jupyterhub">Jupyterhub服务实例部署文档</h1>
+<h2 id="_1">概述</h2>
+<p>支持多用户的 Jupyter Notebook 服务器，用于创建、管理、代理多个 Jupyter Notebook 实例。具有扩展性和可定制性，服务本身免费，只用为云服务资源付费。
+本服务主要提供以下功能
+- 快速部署Jupyter Notebook
+- 与阿里云OAuth打通
+- 支持使用ECI+Spot Serverless节约成本</p>
+<h2 id="_2">计费说明</h2>
+<p>Jupyterhub部署的为社区开源版本，源码参考<a href="https://github.com/jupyterhub/zero-to-jupyterhub-k8s">Github Repo</a>
+- 已有阿里云ack集群，这种情况下可以直接将服务部署到该集群中，用户不需付费。
+- 新建阿里云ack集群，然后部署服务，这种情况下只用支付ack资源本身的费用。</p>
+<p>Jupyterhub在计算巢上的费用主要涉及：</p>
+<ul>
+<li>所选vCPU与内存规格</li>
+<li>磁盘容量</li>
+<li>公网带宽</li>
+<li>ack集群费用</li>
+</ul>
+<p>计费方式包括：</p>
+<ul>
+<li>按量付费（小时）</li>
+<li>包年包月</li>
+</ul>
+<p>预估费用在创建实例时可实时看到。</p>
+<h2 id="_3">部署架构</h2>
+<p>Jupyterhub服务为容器服务，部署在ack集群上。</p>
+<h2 id="ram">RAM账号所需权限</h2>
+<p>Jupyterhub服务需要对ECS、VPC、ACK等资源进行访问和创建操作，若您使用RAM用户创建服务实例，需要在创建服务实例前，对使用的RAM用户的账号添加相应资源的权限。添加RAM权限的详细操作，请参见<a href="https://help.aliyun.com/document_detail/121945.html">为RAM用户授权</a>。所需权限如下表所示。</p>
+<table>
+<thead>
+<tr>
+<th>权限策略名称</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>AliyunECSFullAccess</td>
+<td>管理云服务器服务（ECS）的权限</td>
+</tr>
+<tr>
+<td>AliyunVPCFullAccess</td>
+<td>管理专有网络（VPC）的权限</td>
+</tr>
+<tr>
+<td>AliyunROSFullAccess</td>
+<td>管理资源编排服务（ROS）的权限</td>
+</tr>
+<tr>
+<td>AliyunComputeNestUserFullAccess</td>
+<td>管理计算巢服务（ComputeNest）的用户侧权限</td>
+</tr>
+<tr>
+<td>AliyunCloudMonitorFullAccess</td>
+<td>管理云监控（CloudMonitor）的权限</td>
+</tr>
+<tr>
+<td>AliyunCSFullAccess</td>
+<td>管理容器服务(CS)的权限</td>
+</tr>
+</tbody>
+</table>
+<h2 id="_4">部署流程</h2>
+<h3 id="_5">部署步骤</h3>
+<p>您可以在阿里云计算巢自行搜索，也可以通过下述部署链接快速到达。</p>
+<p><a href="https://computenest.console.aliyun.com/service/instance/create/cn-hangzhou?type=user&amp;ServiceName=Jupyterhub%E7%A4%BE%E5%8C%BA%E7%89%88">部署链接</a></p>
+<h3 id="_6">部署参数说明</h3>
+<p>您在创建服务实例的过程中，需要配置服务实例信息。下文介绍Jupyterhub服务实例输入参数的详细信息,分为已有ack集群和新建ack集群两种。</p>
+<h4 id="ack">已有ack集群</h4>
+<p><img alt="create-1" src="create-1.png" />
+<img alt="create-1" src="create-2.png" />
+<img alt="create-1" src="create-3.png" /></p>
+<p>是否新建ack集群参数选择否时，代表现在已有ack集群，此时需要填写以下参数。</p>
+<table>
+<thead>
+<tr>
+<th>参数组</th>
+<th>参数项</th>
+<th>示例</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>服务实例名称</td>
+<td></td>
+<td>test</td>
+<td>实例的名称</td>
+</tr>
+<tr>
+<td>地域</td>
+<td></td>
+<td>华东1（杭州）</td>
+<td>选中服务实例的地域，建议就近选中，以获取更好的网络延时。</td>
+</tr>
+<tr>
+<td>是否新建ack集群</td>
+<td>是否新建ack集群</td>
+<td>否</td>
+<td>选择否代表已有ack集群，不用新建</td>
+</tr>
+<tr>
+<td>是否新建ack集群</td>
+<td>K8s集群ID</td>
+<td>ccde6deb0f612402786e611a7e1230d</td>
+<td>根据地域选择地域中用户已有的集群id</td>
+</tr>
+<tr>
+<td>应用配置</td>
+<td>域名</td>
+<td>jupyter.mycompany.com</td>
+<td>访问的域名</td>
+</tr>
+<tr>
+<td>应用配置</td>
+<td>Helm 配置</td>
+<td>{}</td>
+<td>helm的配置详细参考https://github.com/jupyterhub/zero-to-jupyterhub-k8s)｜</td>
+</tr>
+</tbody>
+</table>
+<h4 id="ack_1">新建ack集群</h4>
+<table>
+<thead>
+<tr>
+<th>参数组</th>
+<th>参数项</th>
+<th>示例</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>服务实例名称</td>
+<td></td>
+<td>test</td>
+<td>实例的名称</td>
+</tr>
+<tr>
+<td>地域</td>
+<td></td>
+<td>华东1（杭州）</td>
+<td>选中服务实例的地域，建议就近选中，以获取更好的网络延时。</td>
+</tr>
+<tr>
+<td>是否新建ack集群</td>
+<td></td>
+<td>是</td>
+<td>选择是代表新建ack集群</td>
+</tr>
+<tr>
+<td>付费类型配置</td>
+<td>付费类型</td>
+<td>按量付费 或 包年包月</td>
+<td></td>
+</tr>
+<tr>
+<td>基础配置</td>
+<td>可用区</td>
+<td>可用区I</td>
+<td>地域下的不同可用区域</td>
+</tr>
+<tr>
+<td>基础配置</td>
+<td>专有网络VPC实例ID</td>
+<td>vpc-xxx</td>
+<td>选择地域下可用的vpc,不存在可以新建</td>
+</tr>
+<tr>
+<td>基础配置</td>
+<td>交换机实例ID</td>
+<td>vsw-xxx</td>
+<td>选择vpc下的vsw，这个vsw筛选会受上面不同可用区域影响，不存在可以新建</td>
+</tr>
+<tr>
+<td>基础配置</td>
+<td>实例密码</td>
+<td><strong><em>*</em></strong>*</td>
+<td>设置实例密码。长度8~30个字符，必须包含三项（大写字母、小写字母、数字、()~!@#$%^&amp;*-+={}[]:;'&lt;&gt;,.?/ 中的特殊符号）</td>
+</tr>
+<tr>
+<td>Kubernetes配置</td>
+<td>Worker节点规格</td>
+<td>ecs.g6.large</td>
+<td>选择对应cpu核数和内存大小的ecs实例，用作k8s节点</td>
+</tr>
+<tr>
+<td>Kubernetes配置</td>
+<td>Worker 系统盘磁盘类型</td>
+<td>ESSD云盘</td>
+<td>选择k8s集群Worker节点使用的系统盘磁盘类型</td>
+</tr>
+<tr>
+<td>Kubernetes配置</td>
+<td>Worker节点系统盘大小(GB)</td>
+<td>120</td>
+<td>设置Worker节点系统盘大小，单位为GB</td>
+</tr>
+<tr>
+<td>Kubernetes配置</td>
+<td>ack网络插件</td>
+<td>Flannel</td>
+<td>ack集群对应的网络插件，可以选择Flannel或者Terway，网络插件不同，下面设置的pod网络参数不同</td>
+</tr>
+<tr>
+<td>Kubernetes配置</td>
+<td>Pod 网络 CIDR</td>
+<td>10.0.0.0/16</td>
+<td>ack Pod网络段，网络插件为Flannel时必填，请填写有效的私有网段，即以下网段及其子网：10.0.0.0/8，172.16-31.0.0/12-16，192.168.0.0/16，不能与 VPC 及 VPC 内已有 Kubernetes 集群使用的网段重复。</td>
+</tr>
+<tr>
+<td>Kubernetes配置</td>
+<td>pod交换机实例ID</td>
+<td>vsw-xx</td>
+<td>ack Pod交换机实例id，网络插件为Terway时必填，建议选择网段掩码不大于 19 的虚拟交换机</td>
+</tr>
+<tr>
+<td>Kubernetes配置</td>
+<td>Service CIDR</td>
+<td>172.16.0.0/16</td>
+<td>ack Service网络段, 可选范围：10.0.0.0/16-24，172.16-31.0.0/16-24，192.168.0.0/16-24,不能与 VPC 及 VPC 内已有 Kubernetes 集群使用的网段重复。</td>
+</tr>
+<tr>
+<td>应用配置</td>
+<td>域名</td>
+<td>jupyter.mycompany.com</td>
+<td>访问的域名</td>
+</tr>
+<tr>
+<td>应用配置</td>
+<td>Helm 配置</td>
+<td>{}</td>
+<td>helm的配置详细参考https://github.com/jupyterhub/zero-to-jupyterhub-k8s)｜</td>
+</tr>
+</tbody>
+</table>
+<h3 id="_7">验证结果</h3>
+<p>1.查看服务实例，服务实例创建成功后，部署时间大约需要10分钟。部署完成后，页面上可以看到对应的服务实例。</p>
+<p><img alt="create-4.png" src="create-4.png" /></p>
+<p>2.点击详情，可以查看实例详情，具体页面如下：</p>
+<p><img alt="create-5.png" src="create-5.png" /></p>
+<p>3.部署成功的服务实例详情如上图所示，需要配置host内容到域名A记录或者配置本机的host配置，最后访问域名即可链接服务
+<img alt="success-0.png" src="success-0.png" /></p>
+<h2 id="_8">高级选项</h2>
+<h3 id="ackecispotworker">ACK场景下使用ECI+Spot弹性运行Worker节省成本</h3>
+<p>选择对应的ack集群，运维管理-&gt;组件管理-&gt;安装ACK Virtual Node 开启ECI弹性能力
+<img alt="update-0.png" src="update-0.png" />
+进入服务实例-&gt;修改配置</p>
+<p><img alt="update-1.png" src="update-1.png" />
+<img alt="update-2.png" src="update-2.png" /></p>
+<pre><code class="language-yaml">singleuser:
+  extraLabels:
+    alibabacloud.com/eci: 'true'
+  extraAnnotations:
+    k8s.aliyun.com/eci-spot-strategy: SpotAsPriceGo
+
+</code></pre>
+<p><img alt="success-1.png" src="success-1.png" />
+<img alt="success-2.png" src="success-2.png" /></p>
+<h3 id="helm">helm包路径</h3>
+<pre><code>https://github.com/aliyun-computenest/jupyterhub/blob/main/targets/jupyterhub-4.0.0.tgz
+</code></pre>
+<h3 id="_9">更多配置</h3>
+<p>请参考地址
+https://z2jh.jupyter.org/en/stable/jupyterhub/customizing/user-environment.html</p>
+        
+      </div>
+
+      <div class="copyrights">© 2009-2022 Aliyun.com 版权所有</div>
+    </div>
+  </div>
+  
+  <!--
+  MkDocs version      : 1.6.1
+  Docs Build Date UTC : 2025-02-25 08:22:25.506663+00:00
+  -->
+</body>
+</html>
